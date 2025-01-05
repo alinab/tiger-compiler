@@ -5,5 +5,4 @@ errormsg.sml
 tokens.sig
 tokens.sml
 tiger.lex
-basis.cm
 smlnj-lib.cm
