@@ -30,11 +30,12 @@ struct
 
   fun error pos (msg:string) =
       let fun look(a::rest,n) =
-		if a<pos then app print [":",
+		if a<pos
+        then app print [":",
 				       Int.toString n,
 				       ".",
 				       Int.toString (pos-a)]
-		       else look(rest,n-1)
+	    else look(rest,n-1)
 	    | look _ = print "0.0"
        in anyErrors := true;
 	  print (!fileName);
@@ -50,4 +51,3 @@ struct
        raise Error)
 
 end  (* structure ErrorMsg *)
-  
