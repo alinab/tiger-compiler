@@ -49,13 +49,15 @@ Declarations that help in debugging errors are:
 
 * `%value`: lists the values that should be associated with terminals during insertions or substitutions made during error-correction.
 
-* `%change`: is a generalization of the `%prefer%` and the `%subst (terminals substituted for others while trying to parse errors, ** made after preferred insertions listed in `%prefer` when all other things are equal.**) commands.
+* `%change`: is a generalization of the `%prefer%` and the `%subst` (terminals substituted for others while trying to parse errors, **made after preferred insertions listed in `%prefer` when all other things are equal.**) commands.
 
 ### Grammar rules
 
 * Start of parsing: It begins at the rule:
 
-  `program : exp ()`
+  ```
+  program : exp ()
+  ```
 
   with the rule for exp defined later
 
@@ -74,7 +76,8 @@ Declarations that help in debugging errors are:
 
 * Type declarations: They are parsed using the rules:
 
-  ```tydec: TYPE ID EQ ty ()
+  ```
+  tydec: TYPE ID EQ ty ()
 
   ty: ID                     ()
     | LBRACE tyfields RBRACE ()
@@ -91,7 +94,8 @@ Declarations that help in debugging errors are:
 
 * Variable declarations: are parsed using the rules:
 
-  ```vardec: VAR ID ASSIGN exp          ()
+  ```
+  vardec: VAR ID ASSIGN exp          ()
         | VAR ID COLON ID ASSIGN exp ()
   ```
 
@@ -99,11 +103,12 @@ Declarations that help in debugging errors are:
 
 * Function declarations: consist of:
 
-  ``` fundec: FUNCTION ID LPAREN tyfields RPAREN EQ exp          ()
+  ```
+  fundec: FUNCTION ID LPAREN tyfields RPAREN EQ exp          ()
          | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()
-   ```
+  ```
 
-   The first line specifies a procedure declaration (procedures do not return values), the second line is a function declaration; functions do return values, whose type is specified after the colon. The tyfields nonterminal specifies the names and types of the parameters passed to the function (always by values).
+  The first line specifies a procedure declaration (procedures do not return values), the second line is a function declaration; functions do return values, whose type is specified after the colon. The tyfields nonterminal specifies the names and types of the parameters passed to the function (always by values).
 
 
 * Expressions: One or more expressions are parsed using:
@@ -118,23 +123,29 @@ Declarations that help in debugging errors are:
   The rules for various expressions are:
 
   * let-in:
+
    ```
    letexp: LET decs IN expseq END ()
    ```
+
   * nil values, used in records or variables
 
   * locations: which contain values that can be read or assigned
+
    ```
    lvalue: ID                 ()
       | lvalue DOT ID            ()
       | lvalue LBRACK exp RBRACK ()
-   ```
+  ```
 
   * unit:
+
     ```
     LPAREN RPAREN                   ()
     ```
+
   * sequence of expressions:
+
   ```
   LPAREN expseq RPAREN            ()
   ```
@@ -142,6 +153,7 @@ Declarations that help in debugging errors are:
   * literals: such as integers and strings
 
   * integer operations:
+
   ```
   intop: PLUS   ()
      | MINUS  ()
@@ -150,6 +162,7 @@ Declarations that help in debugging errors are:
   ```
 
   * integer comparisions:
+
    ```
    eqop:  EQ  ()
      | NEQ ()
@@ -162,62 +175,83 @@ Declarations that help in debugging errors are:
     ```
 
   * string comparisions:
-   ```
-   stringcomp: STRING eqop STRING ()
-   ```
+
+  ```
+  stringcomp: STRING eqop STRING ()
+  ```
 
   * record expressions:
-   ```
-   recexp: ID LBRACE ID EQ exp recexplist RBRACE ()
+
+  ```
+  recexp: ID LBRACE ID EQ exp recexplist RBRACE ()
        | ID LBRACE RBRACE                      ()
 
-    recexplist: COMMA ID EQ exp recexplist ()
+  recexplist: COMMA ID EQ exp recexplist ()
           | (*epsilon*)                ()
 
-    recassign: ID DOT ID ASSIGN exp ()
-    ```
+  recassign: ID DOT ID ASSIGN exp ()
+  ```
 
     Records are created using the rule with recexp; recexplist specifies one or more ```identifier = expression```s for the record. The rule with recassign assigns an expression to a record variable.
 
   * array expressions:
-   ```
-   arrexp: ID LBRACK exp RBRACK OF exp ()
-   ```
+
+  ```
+  arrexp: ID LBRACK exp RBRACK OF exp ()
+  ```
 
   * function calls:
-   ```
-   funccall: ID LPAREN RPAREN                 ()
-           | ID LPAREN exp funcarglist RPAREN ()
 
-   funcarglist: COMMA exp funcarglist ()
-              |                       ()
+  ```
+  funccall: ID LPAREN RPAREN                 ()
+          | ID LPAREN exp funcarglist RPAREN ()
+
+  funcarglist: COMMA exp funcarglist ()
+             |                       ()
+
    ```
   * if-then-else, if-then expressions:
-     ```
-     IF exp THEN exp ELSE exp        ()
-     IF exp THEN exp                 ()
-     ```
+
+  ```
+  IF exp THEN exp ELSE exp        ()
+  IF exp THEN exp                 ()
+  ```
+
   * while expressions:
-    ```
-    WHILE exp DO exp                ()
-    ```
+
+  ```
+  WHILE exp DO exp                ()
+  ```
+
   * for-to-do expression:
-     ```
-     FOR ID ASSIGN exp TO exp DO exp ()
-     ```
+
+  ```
+  FOR ID ASSIGN exp TO exp DO exp ()
+  ```
 
   * break
-    ```
-    BREAK                           ()
-    ```
+
+  ```
+  BREAK                           ()
+  ```
+
   * arithmetic expressions with variables:
 
-    ```
+  ```
     ID EQ exp                       ()
     ID intop exp                    ()
-    ```
+  ```
+
+Papers for [LR][4], [LALR][5] parsing
 
 ### Documentation
+
 [1]: <https://www.cs.princeton.edu/~appel/modern/ml/ml-yacc/manual.html#section2> Introduction to ML-Yacc
+
 [2]: <https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=43247bea84122c52aa2d86aa86a8f4997825d419> User's Guide to ML-Lex and Ml-Yacc
+
 [3]: <https://dl.acm.org/doi/10.1145/22719.22720> A practical method for LR and LL syntactic error diagnosis and recovery
+
+[4]: <https://dl.acm.org/doi/10.1145/356628.356629> LR Parsing
+
+[5]: <https://dl.acm.org/doi/10.1145/69622.357187> Efficient Computation of LALR(1) Look-Ahead Sets
