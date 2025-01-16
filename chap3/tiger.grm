@@ -48,8 +48,97 @@
 %value STRING ("")
 %change -> IN ID END (*scope closer*)
 %%
+program: exp ()
 
-program	: exp				()
+letexp: LET decs IN expseq END ()
 
-	
-exp: 			()
+decs: dec decs ()
+    |          ()
+
+dec: tydec  ()
+   | vardec ()
+   | fundec ()
+
+(* Type and type declarations *)
+tydec: TYPE ID EQ ty ()
+
+ty: ID                     ()
+  | LBRACE tyfields RBRACE ()
+  | ARRAY OF ID            ()
+
+tyfields: (*epsilon*)           ()
+        | ID COLON ID typeidseq ()
+
+typeidseq: COMMA ID COLON ID typeidseq ()
+         |                             ()
+
+(* Variable declarations *)
+vardec: VAR ID ASSIGN exp          ()
+      | VAR ID COLON ID ASSIGN exp ()
+
+(* Function declarations *)
+fundec: FUNCTION ID LPAREN tyfields RPAREN EQ exp          ()
+      | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()
+
+expseq: exp SEMICOLON expseq ()
+      | exp                  ()
+
+(* Expressions *)
+exp: letexp                          ()
+   | lvalue                          ()
+   | NIL                             ()
+   | LPAREN expseq RPAREN            ()
+   | LPAREN RPAREN                   ()
+   | STRING                          ()
+   | INT                             ()
+   | INT intop INT                   ()
+   | intcomp                         ()
+   | refcomp                         ()
+   | stringcomp                      ()
+   | recexp                          ()
+   | recassign                       ()
+   | arrexp                          ()
+   | IF exp THEN exp ELSE exp        ()
+   | IF exp THEN exp                 ()
+   | WHILE exp DO exp                ()
+   | FOR ID ASSIGN exp TO exp DO exp ()
+   | BREAK                           ()
+   | ID EQ exp                       ()
+   | ID intop exp                    ()
+   | funccall                        ()
+
+lvalue: ID                       ()
+      | lvalue DOT ID            ()
+      | lvalue LBRACK exp RBRACK ()
+
+intop: PLUS   ()
+     | MINUS  ()
+     | TIMES  ()
+     | DIVIDE ()
+
+eqop:  EQ  ()
+     | NEQ ()
+     | LT  ()
+     | LE  ()
+     | GT  ()
+     | GE  ()
+
+intcomp: INT eqop INT  ()
+
+stringcomp: STRING eqop STRING ()
+
+recexp: ID LBRACE ID EQ exp recexplist RBRACE ()
+      | ID LBRACE RBRACE                      ()
+
+recexplist: COMMA ID EQ exp recexplist ()
+          | (*epsilon*)                ()
+
+recassign: ID DOT ID ASSIGN exp ()
+
+arrexp: ID LBRACK exp RBRACK OF exp ()
+
+funccall: ID LPAREN RPAREN                 ()
+        | ID LPAREN exp funcarglist RPAREN ()
+
+funcarglist: COMMA exp funcarglist ()
+           |                       ()
