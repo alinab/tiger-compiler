@@ -19,7 +19,7 @@ digits=[0-9];
 identifiers=[a-z]([a-zA-Z_0-9]*);
 strings = (\"([a-zA-Z0-9_ ])*\");
 unclosedStrings= (([a-zA-Z0-9][\t\n\\])+\") | (\"([a-zA-Z0-9]*)([\ \t\n\\])*);
-reservedChars = [\?\:\;\(\)\[\]\{\}\.\+\-\=\<\>\&\|\!\@\#\$\%\^\&\*\(\)];
+reservedChars = [\?\:\;\(\)\[\]\{\}\.\+\-\=\<\>\&\|\!\@\#\$\%\^\&\*\(\),];
 commentString = ([a-zA-Z0-9\ ]*{reservedChars}*[a-zA-Z0-9\ ]*);
 validComments= (\/\*{whitespace}+{commentString}*{whitespace}+\*\/);
 unclosedComment = (\/\*{whitespace}+{commentString}*{whitespace}*) |
