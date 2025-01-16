@@ -1,5 +1,7 @@
 type pos = int
-type lexresult = Tokens.token
+type svalue = Tokens.svalue
+type ('a, 'b) token = ('a,'b) Tokens.token
+type lexresult = (svalue, pos) token
 
 val lineNum = ErrorMsg.lineNum
 val linePos = ErrorMsg.linePos
@@ -11,12 +13,13 @@ fun getInt x = case Int.fromString x of
                   | NONE => (ErrorMsg.impossible "Parse error for Integer.")
 
 %%
+%header (functor TigerLexFun(structure Tokens: Tiger_TOKENS));
 whitespace = [\ \t\n];
 digits=[0-9];
 identifiers=[a-z]([a-zA-Z_0-9]*);
-strings = (\"([a-zA-Z0-9]*)([\ \t\n\\]))(\[0-9]{3})*(\f___f\)*\");
-unclosedStrings= (([a-zA-Z0-9]*)([\ \t\n\\])*(\[0-9]{3})*\") | (\"([a-zA-Z0-9]*)([\ \t\n\\])*(\[0-9]{3})*);
-reservedChars = [\?\:\;\(\)\[\]\{\}\.\+\-\=\<\>\&\|];
+strings = (\"([a-zA-Z0-9_ ])*\");
+unclosedStrings= (([a-zA-Z0-9][\t\n\\])+\") | (\"([a-zA-Z0-9]*)([\ \t\n\\])*);
+reservedChars = [\?\:\;\(\)\[\]\{\}\.\+\-\=\<\>\&\|\!\@\#\$\%\^\&\*\(\)];
 commentString = ([a-zA-Z0-9\ ]*{reservedChars}*[a-zA-Z0-9\ ]*);
 validComments= (\/\*{whitespace}+{commentString}*{whitespace}+\*\/);
 unclosedComment = (\/\*{whitespace}+{commentString}*{whitespace}*) |
@@ -62,10 +65,10 @@ array  => (Tokens.ARRAY(yypos, yypos + 5));
 ";"  => (Tokens.SEMICOLON(yypos, yypos + 1));
 ":"  => (Tokens.COLON(yypos, yypos + 1));
 ","	=> (Tokens.COMMA(yypos, yypos + 1));
+":=" => (Tokens.ASSIGN(yypos, yypos + 1));
 {digits}+ => (Tokens.INT(getInt yytext, yypos, yypos));
 {identifiers} => (Tokens.ID(yytext, yypos, yypos + (size yytext)));
 {strings}   => (Tokens.STRING(yytext, yypos, yypos + (size yytext)));
-{unclosedStrings} => (ErrorMsg.error yypos ("unclosed string " ^ yytext); continue());
 {validComments}+ => (lineNum := !lineNum + 1; linePos := yypos :: !linePos; continue());
 {unclosedComment} => (ErrorMsg.error yypos ("comment not closed " ^ yytext); continue());
 {whitespace}+	=> (lineNum := !lineNum + 1; linePos := yypos :: !linePos; continue());

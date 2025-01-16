@@ -1,6 +1,6 @@
 Group is
 
-tiger.lex
+../chap2/tiger.lex
 errormsg.sml
 parsetest.sml
 tiger.grm
