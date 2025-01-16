@@ -61,12 +61,14 @@ Declarations that help in debugging errors are:
 
 * Declarations: All declarations are handled using the rules:
 
-  ```decs: dec decs ()
-      |          ()```
+  ```
+  decs: dec decs ()
+      |          ()
 
-  ```dec: tydec  ()
+  dec: tydec  ()
    | vardec ()
-   | fundec ()```
+   | fundec ()
+  ```
 
   There can be more than one declaration in a block of declarations and they can be either type, variable or function declarations
 
@@ -82,111 +84,138 @@ Declarations that help in debugging errors are:
           | ID COLON ID typeidseq ()
 
   typeidseq: COMMA ID COLON ID typeidseq ()
-           |                             ()```
+           |                             ()
+  ```
 
   Types can be defined or existing types redefined using declarations. A type field can consist of an empty, one or more identifiers signifying types. A type can also be an array of a type.
 
 * Variable declarations: are parsed using the rules:
 
   ```vardec: VAR ID ASSIGN exp          ()
-        | VAR ID COLON ID ASSIGN exp ()```
+        | VAR ID COLON ID ASSIGN exp ()
+  ```
 
   A variable assignment consists of assigning an expression to a variable, with an optional type declaration.
 
 * Function declarations: consist of:
 
   ``` fundec: FUNCTION ID LPAREN tyfields RPAREN EQ exp          ()
-         | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()```
+         | FUNCTION ID LPAREN tyfields RPAREN COLON ID EQ exp ()
+   ```
 
    The first line specifies a procedure declaration (procedures do not return values), the second line is a function declaration; functions do return values, whose type is specified after the colon. The tyfields nonterminal specifies the names and types of the parameters passed to the function (always by values).
 
 
 * Expressions: One or more expressions are parsed using:
 
-  ```expseq: exp SEMICOLON expseq ()
+  ```
+  expseq: exp SEMICOLON expseq ()
         | exp                  ()
 
-  exp: <rules>```
+  exp: <rules>
+  ```
 
   The rules for various expressions are:
 
   * let-in:
-   ``` letexp: LET decs IN expseq END ()
-
+   ```
+   letexp: LET decs IN expseq END ()
+   ```
   * nil values, used in records or variables
 
   * locations: which contain values that can be read or assigned
-   ``` lvalue: ID                 ()
+   ```
+   lvalue: ID                 ()
       | lvalue DOT ID            ()
-      | lvalue LBRACK exp RBRACK ()```
+      | lvalue LBRACK exp RBRACK ()
+   ```
 
   * unit:
-    ```LPAREN RPAREN                   ()```
-
+    ```
+    LPAREN RPAREN                   ()
+    ```
   * sequence of expressions:
-  ``` LPAREN expseq RPAREN            ()```
+  ```
+  LPAREN expseq RPAREN            ()
+  ```
 
   * literals: such as integers and strings
 
   * integer operations:
-  ``` intop: PLUS   ()
+  ```
+  intop: PLUS   ()
      | MINUS  ()
      | TIMES  ()
-     | DIVIDE ()```
+     | DIVIDE ()
+  ```
 
   * integer comparisions:
-   ``` eqop:  EQ  ()
+   ```
+   eqop:  EQ  ()
      | NEQ ()
      | LT  ()
      | LE  ()
      | GT  ()
      | GE  ()
 
-    intcomp: INT eqop INT  ()```
+    intcomp: INT eqop INT  ()
+    ```
 
   * string comparisions:
-   ``` stringcomp: STRING eqop STRING ()```
+   ```
+   stringcomp: STRING eqop STRING ()
+   ```
 
   * record expressions:
-   ``` recexp: ID LBRACE ID EQ exp recexplist RBRACE ()
+   ```
+   recexp: ID LBRACE ID EQ exp recexplist RBRACE ()
        | ID LBRACE RBRACE                      ()
 
     recexplist: COMMA ID EQ exp recexplist ()
           | (*epsilon*)                ()
 
-    recassign: ID DOT ID ASSIGN exp ()```
+    recassign: ID DOT ID ASSIGN exp ()
+    ```
 
     Records are created using the rule with recexp; recexplist specifies one or more ```identifier = expression```s for the record. The rule with recassign assigns an expression to a record variable.
 
   * array expressions:
-   ``` arrexp: ID LBRACK exp RBRACK OF exp ()```
+   ```
+   arrexp: ID LBRACK exp RBRACK OF exp ()
+   ```
 
   * function calls:
-   ``` funccall: ID LPAREN RPAREN                 ()
-             | ID LPAREN exp funcarglist RPAREN ()
+   ```
+   funccall: ID LPAREN RPAREN                 ()
+           | ID LPAREN exp funcarglist RPAREN ()
 
-    funcarglist: COMMA exp funcarglist ()
-                |                       ()```
-
-
+   funcarglist: COMMA exp funcarglist ()
+              |                       ()
+   ```
   * if-then-else, if-then expressions:
-     ``` | IF exp THEN exp ELSE exp        ()
-      | IF exp THEN exp                 ()```
-
+     ```
+     IF exp THEN exp ELSE exp        ()
+     IF exp THEN exp                 ()
+     ```
   * while expressions:
-     ```WHILE exp DO exp                ()```
-
+    ```
+    WHILE exp DO exp                ()
+    ```
   * for-to-do expression:
-     ```FOR ID ASSIGN exp TO exp DO exp ()```
+     ```
+     FOR ID ASSIGN exp TO exp DO exp ()
+     ```
 
   * break
-     ```BREAK                           ()```
-
+    ```
+    BREAK                           ()
+    ```
   * arithmetic expressions with variables:
 
-    ``` ID EQ exp                       ()
-     ID intop exp                    ()```
-
+    ```
+    ID EQ exp                       ()
+    ID intop exp                    ()
+    ```
 
 ### Documentation
 [1]: <https://www.cs.princeton.edu/~appel/modern/ml/ml-yacc/manual.html#section2> Introduction to ML-Yacc
