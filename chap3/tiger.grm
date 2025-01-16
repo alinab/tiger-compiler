@@ -47,6 +47,10 @@
 %value INT (0)
 %value STRING ("")
 %change -> IN ID END (*scope closer*)
+%change ARRAY ID -> ARRAY OF ID
+%change ID DOT ID EQ -> ID DOT ID ASSIGN
+%change FOR ID EQ -> FOR ID ASSIGN
+%change EQ -> ASSIGN
 %%
 program: exp ()
 
