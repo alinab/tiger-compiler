@@ -3,6 +3,8 @@ struct
 
 type pos = int   and   symbol = Symbol.symbol
 
+val mksym = Symbol.mksymbol
+
 datatype var = SimpleVar of symbol * pos
             | FieldVar of var * symbol * pos
             | SubscriptVar of var * exp * pos
