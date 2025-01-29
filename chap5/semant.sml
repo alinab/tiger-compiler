@@ -1,0 +1,4 @@
+structure Semant =
+struct
+end
+
