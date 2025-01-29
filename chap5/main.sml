@@ -1,0 +1,4 @@
+structure Main =
+struct
+
+end
