@@ -5,5 +5,13 @@ types.sml
 env.sml
 semant.sml
 translate.sml
+absyn.sml
+main.sml
+parse.sml
+errormsg.sml
+prabsyn.sml
+tiger.grm
+tiger.lex
 $/basis.cm
 $/smlnj-lib.cm
+$/ml-yacc-lib.cm

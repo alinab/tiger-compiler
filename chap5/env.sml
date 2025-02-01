@@ -1,13 +1,15 @@
-signature ENV =
+(*
+ * signature ENV =
 sig
   (*type access*)
   type ty
   type enventry
+
   val base_tenv : ty Symbol.table (* predefined types *)
   val base_venv : enventry Symbol.table (* predefined functions *)
 end
-
-structure Env :> ENV =
+*)
+structure Env =
 struct
   type ty = Types.ty
 
