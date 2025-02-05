@@ -81,9 +81,9 @@ struct
       | trexp(A.RecordExp{fields, typ, pos}) =
        (let
          val fieldExpsSyms =
-            List.map (fn (s, e, p) => (e, s)) fields
-         val fieldTyps = List.map (fn x => #ty(trexp (#1 x))) fieldExpsSyms
-         val fieldSyms = List.map (fn x => #2 x) fieldExpsSyms
+            List.map (fn (sym, exp, p) => (sym, exp)) fields
+         val fieldTyps = List.map (fn x => #ty(trexp(#2 x))) fieldExpsSyms
+         val fieldSyms = List.map (fn x => #1 x) fieldExpsSyms
          val recordFLs = ListPair.zip(fieldSyms, fieldTyps)
         in
           {exp=(), ty=Types.RECORD(recordFLs, ref())}
@@ -185,17 +185,15 @@ struct
         | _  => (E.error pos ("undefined variable: " ^ Symbol.name symbol);
                   {exp=(), ty=Types.UNIT}))
       | trvar(A.FieldVar(var, symbol, pos)) =
-       (let
-         val testvar = #ty(trvar(var))
-         in
-           case testvar of
-                Types.RECORD(_,_) => (case Symbol.look(venv, symbol) of
-                                       SOME(Env.VarEntry{ty}) => {exp=(), ty=ty}
-                                      | _ => (E.error pos "field variable not found";
-                                                {exp=(), ty=Types.INT}))
-               | _  =>  (E.error pos ("undefined record"); (*How to print var*)
-                          {exp=(), ty=Types.INT})
-         end)
+      (case #ty(trvar var) of
+          Types.RECORD(symtyls, u) =>
+            (case (List.find (fn (sym,ty) => symbol = sym ) symtyls) of
+                 SOME (s,t) => {exp=(), ty=t}
+               | NONE =>  (E.error pos ("undefined record field");
+                          {exp=(), ty=Types.UNIT}))
+         |   _  =>  (E.error pos ("undefined record"); (*How to print var*)
+                        {exp=(), ty=Types.UNIT})
+      )
       | trvar(A.SubscriptVar(var, exp, pos)) =
        (case #ty(trvar(var)) of
           Types.ARRAY(ty,_) => let val expty = trexp exp in
@@ -232,9 +230,9 @@ struct
          let
            fun extractnmtyp recfield =
              case recfield of
-                  {name, escape, typ, pos} => case Symbol.look(tenv, name) of
-                                             SOME t => (name, t)
-                                          |  NONE  => (name, Types.UNIT)
+                  {name, escape, typ, pos} => case Symbol.look(tenv, typ) of
+                                          SOME t => (name, t)
+                                        | NONE  => (name, Types.NIL)
             val recnmtyp = List.map extractnmtyp recfieldsls
          in
            Types.RECORD(recnmtyp, ref())
