@@ -28,12 +28,13 @@ struct
           val (funcResTy, funcFormals) =
             case Symbol.look(venv, func) of
                         SOME(Env.FunEntry{formals,result}) => (result, formals)
-                     |  _ =>  (Types.NIL, [])
-         val argTypes = List.map (fn x => #ty (trexp x)) args
+                     |  _ =>  (E.error pos "function name is missing";
+                              (Types.UNIT, []))
+         val resultTypes = List.map (fn x => #ty (transExp(venv, tenv) x)) args
         in
-          case argTypes = funcFormals of
-               true => {exp=(), ty= funcResTy}
-             | false => {exp=(), ty=Types.INT}
+          if resultTypes = funcFormals
+          then {exp=(), ty=funcResTy}
+          else {exp=(), ty=Types.UNIT}
         end)
       (* Expressions with operations *)
       | trexp(A.OpExp{left, oper=A.PlusOp, right, pos}) =
@@ -266,37 +267,37 @@ struct
        | transDecs(venv, tenv, A.FunctionDec(funcdecls)) =
         (let fun mapfdecs ({name: Symbol.symbol, params: Absyn.field list
                          , result: (Symbol.symbol *  Absyn.pos) option
-                         , body: Absyn.exp, pos: Absyn.pos}, venv) =
+                         , body: Absyn.exp, pos: Absyn.pos}, vEnv) =
              let
                val result_ty = case result of
-                                SOME(rt, pos) => let val resultTyp =
-                                                    case Symbol.look(tenv, rt) of
-                                                     SOME t => t
-                                                   | NONE => Types.NIL
-                                                 in resultTyp
-                                                end
-                               | NONE => Types.UNIT
+                   SOME(rt, pos) => (case Symbol.look(tenv, rt) of
+                                          SOME t => t
+                                        | NONE  => Types.NIL)
+                  | NONE => Types.NIL
 
-                  val params' = map (fn x => case Symbol.look(tenv, #typ x) of
+                val params' = List.map (fn {name, escape, typ, pos} =>
+                                                case Symbol.look(tenv, typ) of
                                           SOME t => {name=name, ty=t}
-                                        | NONE  => {name=name
-                                                        , ty=Types.NIL}) params
-                  val venv' = Symbol.enter(venv, name,
-                                         Env.FunEntry{formals = map #ty params',
-                                                      result = result_ty})
-                 fun enterfparam ({name, ty}, venv) = Symbol.enter(venv, name
-                                                                   , Env.VarEntry{ty=ty})
-                 val venv'' = List.foldl enterfparam venv' params'
+                                        | NONE  => {name=name , ty=Types.NIL})
+                                        params
+
+                val venv' = Symbol.enter(vEnv, name,
+                                          Env.FunEntry{formals = List.map #ty params',
+                                                       result = result_ty})
+
+                fun enterparam ({name, ty}, venv) =
+                            Symbol.enter(venv, name, Env.VarEntry{ty=ty})
+
+                val venv'' = List.foldl enterparam venv' params'
               in
-                let val {exp, ty} = transExp (venv'', tenv) body
-                in
-                 case result_ty = ty of
-                      true => venv''
-                   | false => venv (* indicates an error *)
-                 end
-              end
+                transExp(venv'', tenv) body;
+                venv''
+             end
          in
-           {venv= List.foldl mapfdecs venv funcdecls, tenv=tenv}
+           let val venv''' = List.foldl (fn (x,v) => mapfdecs(x, v)) venv funcdecls
+           in
+            {venv=venv''', tenv=tenv}
+           end
          end)
 
   in fun transProg abExp = transExp(Env.base_venv, Env.base_tenv) abExp
