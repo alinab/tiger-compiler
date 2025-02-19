@@ -4,3 +4,6 @@
 # Ignore SML compilation artifacts
 *.ud
 *.du
+*.lex.sml
+*.grm.sml
+*.grm.desc
