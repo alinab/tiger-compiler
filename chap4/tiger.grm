@@ -1,4 +1,5 @@
 structure A = Absyn
+structure S = Symbol
 %%
 %name Tiger
 %term
@@ -83,59 +84,59 @@ dec: tydec                                 (tydec)
    | fundec                                (fundec)
 
 (* Type and type declarations *)
-tydec: TYPE ID EQ ty                       (A.TypeDec[{name=A.mksym(ID)
+tydec: TYPE ID EQ ty                       (A.TypeDec[{name=S.mksymbol(ID)
                                                       , ty=ty
                                                       , pos=TYPEleft}])
 
-ty: ID                                     (A.NameTy(A.mksym(ID), IDleft))
+ty: ID                                     (A.NameTy(S.mksymbol(ID), IDleft))
   | LBRACE tyfields RBRACE                 (tyfields)
-  | ARRAY OF ID                            (A.ArrayTy(A.mksym(ID), IDleft))
+  | ARRAY OF ID                            (A.ArrayTy(S.mksymbol(ID), IDleft))
 
 tyfields: (*epsilon*)                      (A.RecordTy[])
-        | ID COLON ID typeidseq            (A.RecordTy[{name=A.mksym(ID1)
+        | ID COLON ID typeidseq            (A.RecordTy[{name=S.mksymbol(ID1)
                                                         , escape=ref true
-                                                        , typ=A.mksym(ID2)
+                                                        , typ=S.mksymbol(ID2)
                                                         , pos=ID1left}])
 
-typeidseq: COMMA ID COLON ID typeidseq     (A.RecordTy[{name=A.mksym(ID1)
+typeidseq: COMMA ID COLON ID typeidseq     (A.RecordTy[{name=S.mksymbol(ID1)
                                                         , escape=ref true
-                                                        , typ=A.mksym(ID2)
+                                                        , typ=S.mksymbol(ID2)
                                                         , pos=ID1left}])
          |                                 ()
 
 (* Variable declarations *)
-vardec: VAR ID ASSIGN exp                  (A.VarDec{name=A.mksym("test")
+vardec: VAR ID ASSIGN exp                  (A.VarDec{name=S.mksymbol(ID)
                                                       , escape=ref true
                                                       , typ=NONE, init=exp
                                                       , pos=VARleft} )
-      | VAR ID COLON ID ASSIGN exp         (A.VarDec{name=A.mksym(ID1)
+      | VAR ID COLON ID ASSIGN exp         (A.VarDec{name=S.mksymbol(ID1)
                                                      , escape=ref true
-                                                     , typ=SOME(A.mksym(ID2), ID2left)
+                                                     , typ=SOME(S.mksymbol(ID2), ID2left)
                                                      , init=exp, pos=VARleft})
 
 
 (* Function declarations *)
 fundec: FUNCTION ID LPAREN paramfields RPAREN EQ exp
-                                           (A.FunctionDec[{name=A.mksym(ID)
+                                           (A.FunctionDec[{name=S.mksymbol(ID)
                                                         , params=paramfields
                                                         , result=NONE
                                                         , body=exp
                                                         , pos=IDleft}])
-      | FUNCTION ID LPAREN paramfields RPAREN COLON ID EQ exp
-                                           (A.FunctionDec[{name=A.mksym(ID1)
+     | FUNCTION ID LPAREN paramfields RPAREN COLON ID EQ exp
+                                           (A.FunctionDec[{name=S.mksymbol(ID1)
                                                       , params=paramfields
-                                                      , result=SOME(A.mksym(ID2),
+                                                      , result=SOME(S.mksymbol(ID2),
                                                       ID2left)
                                                       , body=exp
                                                       , pos=ID1left}])
 
-paramfields: ID COLON ID COMMA paramfields ([{name=A.mksym(ID1)
+paramfields: ID COLON ID COMMA paramfields ([{name=S.mksymbol(ID1)
                                               , escape=ref true
-                                              , typ=A.mksym(ID2)
+                                              , typ=S.mksymbol(ID2)
                                               , pos=ID1left}] @ paramfields)
-           | ID COLON ID                   ([{name=A.mksym(ID1)
+           | ID COLON ID                   ([{name=S.mksymbol(ID1)
                                                , escape=ref true
-                                               , typ=A.mksym(ID2)
+                                               , typ=S.mksymbol(ID2)
                                                , pos=ID1left}])
            |                               ([])
 
@@ -169,18 +170,18 @@ exp: letexp                                (letexp)
    | WHILE exp DO exp                      (A.WhileExp{test=exp1
                                                     , body=exp2
                                                     , pos=WHILEleft})
-   | FOR ID ASSIGN exp TO exp DO exp       (A.ForExp{var=A.mksym(ID),
+   | FOR ID ASSIGN exp TO exp DO exp       (A.ForExp{var=S.mksymbol(ID),
                                                      escape=ref true
                                                     , lo=exp1
                                                     , hi=exp2
                                                     , body=exp3
                                                     , pos=FORleft})
-   | ID intop exp                          (A.OpExp{left=A.VarExp(A.SimpleVar(A.mksym(ID),
-                                                    IDleft))
+   | ID intop exp                          (A.OpExp{left=A.VarExp(A.SimpleVar(S.mksymbol(ID)
+                                                    , IDleft))
                                                     , oper=intop
                                                     , right=exp
                                                     , pos=IDleft})
-   | ID ASSIGN exp                         (A.AssignExp{var=A.SimpleVar(A.mksym(ID),
+   | ID ASSIGN exp                         (A.AssignExp{var=A.SimpleVar(S.mksymbol(ID),
                                                     IDleft)
                                                     , exp=exp
                                                     , pos=ASSIGNleft})
@@ -194,10 +195,10 @@ exp: letexp                                (letexp)
    | arrassign                             (arrassign)
    | funccall                              (funccall)
 
-lvalue: ID                                 (A.SimpleVar(A.mksym(ID)
+lvalue: ID                                 (A.SimpleVar(S.mksymbol("test")
                                                        , IDleft))
       | lvalue DOT ID                      (A.FieldVar(lvalue
-                                                       , A.mksym(ID)
+                                                       , S.mksymbol(ID)
                                                        , IDleft))
       | lvalue LBRACK exp RBRACK           (A.SubscriptVar(lvalue, exp
                                                        , lvalueleft))
@@ -237,39 +238,39 @@ stringcomp: STRING eqop STRING             (A.OpExp {left=A.StringExp(STRING1
                                                      , STRING2left)})
 
 recexp: ID LBRACE recexplist RBRACE        (A.RecordExp{fields=recexplist
-                                                       , typ=A.mksym(ID)
+                                                       , typ=S.mksymbol(ID)
                                                        , pos=IDleft})
       | ID LBRACE RBRACE                   (A.RecordExp{fields=[]
-                                                       , typ=A.mksym(ID)
+                                                       , typ=S.mksymbol(ID)
                                                        , pos=IDleft})
 
 
-recexplist: ID EQ exp COMMA recexplist     ([(A.mksym(ID)
+recexplist: ID EQ exp COMMA recexplist     ([(S.mksymbol(ID)
                                               , exp, IDleft)] @ recexplist)
-          | ID EQ exp                      ([(A.mksym(ID), exp, IDleft)])
+          | ID EQ exp                      ([(S.mksymbol(ID), exp, IDleft)])
 
 recassign: ID DOT ID ASSIGN exp            (A.AssignExp{var=
-                                              A.FieldVar((A.SimpleVar(A.mksym(ID2),
+                                              A.FieldVar((A.SimpleVar(S.mksymbol(ID2),
                                               ID2left))
-                                              ,A.mksym(ID1)
+                                              ,S.mksymbol(ID1)
                                               ,ID1left)
                                               , exp=exp, pos=ASSIGNright})
 
-arrexp: ID LBRACK exp RBRACK OF exp        (A.ArrayExp{typ=A.mksym(ID),
+arrexp: ID LBRACK exp RBRACK OF exp        (A.ArrayExp{typ=S.mksymbol(ID),
                                                 size=exp1, init=exp2, pos=IDleft})
 
 arrassign: ID LBRACK exp RBRACK ASSIGN exp
                                            (A.AssignExp{var=A.SubscriptVar(
-                                              (A.SimpleVar(A.mksym(ID)
+                                              (A.SimpleVar(S.mksymbol(ID)
                                               , IDleft))
                                               , exp1, exp1left)
                                               , exp=exp2
                                               , pos=exp2left})
 
-funccall: ID LPAREN RPAREN                 (A.CallExp{func=A.mksym(ID)
+funccall: ID LPAREN RPAREN                 (A.CallExp{func=S.mksymbol(ID)
                                                       , args=[]
                                                       , pos=IDleft})
-       | ID LPAREN funcarglist RPAREN      (A.CallExp{func=A.mksym(ID)
+       | ID LPAREN funcarglist RPAREN      (A.CallExp{func=S.mksymbol(ID)
                                                       , args=funcarglist
                                                       , pos=IDleft})
 
