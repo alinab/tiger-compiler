@@ -6,7 +6,7 @@ table.sig
 table.sml
 symbol.sml
 parse.sml
-../chap2/tiger.lex
+tiger.lex
 tiger.grm
 $/basis.cm
 $/smlnj-lib.cm
