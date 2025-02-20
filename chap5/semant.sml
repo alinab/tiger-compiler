@@ -16,6 +16,7 @@ struct
                                      Types.STRING => ()
                                    |  _ => E.error pos "string required"
 
+
   local
   fun transExp(venv, tenv) =
      let fun trexp(A.VarExp(var)) = trvar var
@@ -53,31 +54,19 @@ struct
         (checkInt(trexp left, pos);
         checkInt(trexp right, pos);
         {exp=(), ty=Types.INT})
-      (* Integer comparisions *)
+      (* Comparisions between pairs of integers or pairs of strings*)
       | trexp(A.OpExp{left, oper=A.EqOp, right, pos}) =
-        (checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Types.INT})
+        compIntOrStr(left, right, pos)
       | trexp(A.OpExp{left, oper=A.NeqOp, right, pos}) =
-        (checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Types.INT})
+        compIntOrStr(left, right, pos)
       | trexp(A.OpExp{left, oper=A.LtOp, right, pos}) =
-        (checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Types.INT})
+        compIntOrStr(left, right, pos)
       | trexp(A.OpExp{left, oper=A.LeOp, right, pos}) =
-        (checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Types.INT})
+        compIntOrStr(left, right, pos)
       | trexp(A.OpExp{left, oper=A.GtOp, right, pos}) =
-        (checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Types.INT})
+        compIntOrStr(left, right, pos)
       | trexp(A.OpExp{left, oper=A.GeOp, right, pos}) =
-        (checkInt(trexp left, pos);
-        checkInt(trexp right, pos);
-        {exp=(), ty=Types.INT})
+        compIntOrStr(left, right, pos)
       (* Record Expressions *)
       | trexp(A.RecordExp{fields, typ, pos}) =
        (let
@@ -178,6 +167,17 @@ struct
        in
           {exp=(), ty=arrTyp}
        end)
+
+    and compIntOrStr (expleft, expright, pos) =
+        (if checkInt(trexp expleft, pos)=() andalso
+                    checkInt(trexp expright, pos)=()
+         then {exp=(), ty=Types.INT}
+         else if checkStr(trexp expleft, pos)=() andalso
+                    checkStr(trexp expright, pos)=()
+              then {exp=(), ty=Types.STRING}
+              else {exp=(), ty=Types.UNIT})
+
+    (*** Expression checking ends here ***)
 
     (* Variable  declarations *)
     and trvar(A.SimpleVar(symbol, pos)) =
