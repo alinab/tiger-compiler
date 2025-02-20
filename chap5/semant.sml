@@ -149,8 +149,9 @@ struct
       (* Let expressions *)
       | trexp(A.LetExp{decs, body, pos}) =
        (let val {venv=venv', tenv=tenv'} =
-                List.foldl (fn (x,{venv, tenv}) => transDecs(venv, tenv, x))
-                    {venv=Env.base_venv, tenv=Env.base_tenv} decs
+        List.foldl (fn (x,{venv=venv'', tenv=tenv''})
+                            => transDecs(venv'', tenv'', x))
+                                  {venv=Env.base_venv, tenv=Env.base_tenv} decs
         in
           transExp(venv', tenv') body
         end)
