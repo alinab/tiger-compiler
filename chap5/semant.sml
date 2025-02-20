@@ -158,13 +158,13 @@ struct
       | trexp(A.ArrayExp{typ, size, init, pos}) =
       (let val arrSize = trexp size
            val arrInitVal = trexp init
-           val {tenv=tenv', venv=venv'} = transDecs(venv, tenv
-                                            , A.TypeDec([{name=typ
-                                            , ty=A.ArrayTy(typ, pos)
-                                            , pos = pos}]))
+           val {tenv=tenv', venv=venv'} =
+                transDecs(venv, tenv, A.TypeDec([{name=typ,
+                                                  ty=A.ArrayTy(typ, pos),
+                                                  pos = pos}]))
            val arrTyp = (case Symbol.look(tenv', typ) of
                             SOME (Types.ARRAY(t,_)) => t
-                          | _     => Types.UNIT)
+                          |                   _     => Types.UNIT)
        in
           {exp=(), ty=arrTyp}
        end)
