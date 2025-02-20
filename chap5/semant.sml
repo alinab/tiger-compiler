@@ -217,29 +217,26 @@ struct
      end
 
      (* Transform Absyn.Ty to Types.ty *)
-    and transTy(tenv, absynty) : Types.ty =
-        case absynty of
-          A.NameTy(symbol, pos) => let val t = case Symbol.look(tenv, symbol) of
+    and transTy(tenv, absynty) : Types.ty = case absynty of
+         A.NameTy(symbol, pos) => (let val t = case Symbol.look(tenv, symbol) of
                                                  SOME typ => typ
-                                                | NONE => Types.UNIT
-                                            in
-                                        Types.NAME(symbol, ref(SOME(t)))
-                                        end
-       | A.ArrayTy(symbol, pos) =>
-           (case Symbol.look(tenv, symbol) of
-                   SOME typ => Types.ARRAY(typ, ref())
-                | NONE => Types.UNIT)
+                                               | NONE => Types.UNIT
+                                   in
+                                    Types.NAME(symbol, ref(SOME(t)))
+                                   end)
+       | A.ArrayTy(symbol, pos) => (case Symbol.look(tenv, symbol) of
+                                  SOME typ => Types.ARRAY(typ, ref())
+                                | NONE     => Types.UNIT)
        | A.RecordTy(recfieldsls) =>
-         let
-           fun extractnmtyp recfield =
+         (let fun extractRecTyp recfield =
              case recfield of
                   {name, escape, typ, pos} => case Symbol.look(tenv, typ) of
                                           SOME t => (name, t)
-                                        | NONE  => (name, Types.NIL)
-            val recnmtyp = List.map extractnmtyp recfieldsls
+                                        | NONE  => (name, Types.UNIT)
+             val recnmtyp = List.map extractRecTyp recfieldsls
          in
            Types.RECORD(recnmtyp, ref())
-         end
+         end)
 
     (* Type declarations *)
     and transDecs(venv, tenv, A.TypeDec(tydecls))=
