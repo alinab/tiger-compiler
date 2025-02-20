@@ -179,29 +179,30 @@ struct
 
     (*** Expression checking ends here ***)
 
-    (* Variable  declarations *)
+    (* Variable lookups *)
     and trvar(A.SimpleVar(symbol, pos)) =
       (case Symbol.look(venv, symbol) of
           SOME(Env.VarEntry{ty}) => {exp=(), ty=actualTy(ty, pos)}
-        | _  => (E.error pos ("undefined variable: " ^ Symbol.name symbol);
-                  {exp=(), ty=Types.UNIT}))
+           | _                   => (E.error pos ("undefined variable: "
+                                                        ^ Symbol.name symbol);
+                                    {exp=(), ty=Types.UNIT}))
       | trvar(A.FieldVar(var, symbol, pos)) =
       (case #ty(trvar var) of
           Types.RECORD(symtyls, u) =>
-            (case (List.find (fn (sym,ty) => symbol = sym ) symtyls) of
+            (case (List.find (fn (sym, ty) => symbol = sym) symtyls) of
                  SOME (s,t) => {exp=(), ty=t}
                | NONE =>  (E.error pos ("undefined record field");
                           {exp=(), ty=Types.UNIT}))
-         |   _  =>  (E.error pos ("undefined record"); (*How to print var*)
-                        {exp=(), ty=Types.UNIT})
-      )
+           |   _  =>  (E.error pos ("undefined record");
+                      {exp=(), ty=Types.UNIT}))
       | trvar(A.SubscriptVar(var, exp, pos)) =
-       (case #ty(trvar(var)) of
-          Types.ARRAY(ty,_) => let val expty = trexp exp in
-                                {exp=(), ty=(#ty expty)}
-             end
+       (case #ty(trvar var) of
+          Types.ARRAY(ty, _) => let val expty = trexp exp
+                                in
+                                    {exp=(), ty=(#ty expty)}
+                                end
          | _  =>  (E.error pos ("undefined array"); (*How to print var*)
-          {exp=(), ty=Types.UNIT}))
+                  {exp=(), ty=Types.UNIT}))
 
 
       and actualTy (ty, pos) =
