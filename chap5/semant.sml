@@ -269,39 +269,43 @@ struct
                                                   , Env.VarEntry{ty=Types.NIL})}
            end)
        | transDecs(venv, tenv, A.FunctionDec(funcdecls)) =
-        (let fun mapfdecs ({name: Symbol.symbol, params: Absyn.field list
-                         , result: (Symbol.symbol *  Absyn.pos) option
-                         , body: Absyn.exp, pos: Absyn.pos}, vEnv) =
-             let
-               val result_ty = case result of
+        (let fun mapFunDecs ({name, params, result, body, pos}, venv) =
+             let val resultTy = case result of
                    SOME(rt, pos) => (case Symbol.look(tenv, rt) of
-                                          SOME t => t
+                                          SOME resultTy => resultTy
                                         | NONE  => Types.NIL)
-                  | NONE => Types.NIL
+                 | NONE => Types.NIL
 
-                val params' = List.map (fn {name, escape, typ, pos} =>
-                                                case Symbol.look(tenv, typ) of
-                                          SOME t => {name=name, ty=t}
-                                        | NONE  => {name=name , ty=Types.NIL})
-                                        params
+                val params' = List.map (fn {name=name', escape, typ, pos}
+                                => case Symbol.look(tenv, typ) of
+                                    SOME t => {name=name', ty=t}
+                                  | NONE  => {name=name', ty=Types.NIL}) params
 
-                val venv' = Symbol.enter(vEnv, name,
-                                          Env.FunEntry{formals = List.map #ty params',
-                                                       result = result_ty})
+                val venv' = Symbol.enter(venv, name
+                            , Env.FunEntry{formals = List.map #ty params',
+                                           result = resultTy})
 
-                fun enterparam ({name, ty}, venv) =
-                            Symbol.enter(venv, name, Env.VarEntry{ty=ty})
+                fun enterParams ({name=name'', ty=ty''}, venv) =
+                            Symbol.enter(venv, name'', Env.VarEntry{ty=ty''})
 
-                val venv'' = List.foldl enterparam venv' params'
+                val venv'' = List.foldl enterParams venv' params'
               in
-                transExp(venv'', tenv) body;
-                venv''
+                let val {exp=exp', ty=tenvBody} =
+                                        transExp(venv'', tenv) body;
+                in
+                  if tenvBody = resultTy andalso resultTy <> Types.NIL
+                  then venv''
+                  else (E.error pos "Declared and actual result for function\
+                                    \ does not match";
+                       venv)
+                end
              end
          in
-           let val venv''' = List.foldl (fn (x,v) => mapfdecs(x, v)) venv funcdecls
-           in
-            {venv=venv''', tenv=tenv}
-           end
+           let val venv''' = List.foldl (fn (x,v) =>
+                                                mapFunDecs(x, v)) venv funcdecls
+            in
+                {venv=venv''', tenv=tenv}
+            end
          end)
 
   in fun transProg abExp = transExp(Env.base_venv, Env.base_tenv) abExp
