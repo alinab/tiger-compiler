@@ -243,10 +243,9 @@ struct
 
     (* Type declarations *)
     and transDecs(venv, tenv, A.TypeDec(tydecls))=
-        (let
-             fun enternmty ({name, ty, pos}, tenv) =
+        (let fun enterTyDec ({name, ty, pos}, tenv) =
                             Symbol.enter(tenv, name, transTy(tenv, ty))
-             val tenv' = List.foldl enternmty tenv tydecls
+             val tenv' = List.foldl enterTyDec tenv tydecls
           in
              {venv=venv, tenv=tenv'}
           end)
@@ -255,15 +254,21 @@ struct
             in
               {tenv=tenv, venv=Symbol.enter(venv, name, Env.VarEntry{ty=ty'})}
             end)
-       | transDecs(venv, tenv, A.VarDec{name, escape, typ=SOME(symbol, p), init, pos}) =
+       | transDecs(venv, tenv, A.VarDec{name, escape ,typ=SOME(symbol, p)
+                                                     , init, pos}) =
           (let val {exp=exp', ty=ty'} = transExp(venv, tenv) init
-               val typcons = case Symbol.look(tenv, symbol) of
+               val typConstr = case Symbol.look(tenv, symbol) of
                                          SOME v => v
                                        | NONE => Types.NIL
-           in case ty' = typcons of
-              true => {tenv=tenv, venv=Symbol.enter(venv, name
-                                                    , Env.VarEntry{ty=typcons})}
-          |   false => {tenv=tenv, venv=Symbol.enter(venv , name
+           in case ty' = typConstr of
+              (* Initializing expressions of type NIL must be constrained
+               * by a record type *)
+              true => if typConstr = Types.NIL
+                      then {tenv=tenv , venv=Symbol.enter(venv, name
+                                      , Env.VarEntry{ty=Types.RECORD([], ref())})}
+                      else {tenv=tenv , venv=Symbol.enter(venv, name
+                                                 , Env.VarEntry{ty=typConstr})}
+          |   false => {tenv=tenv, venv=Symbol.enter(venv, name
                                                   , Env.VarEntry{ty=Types.NIL})}
            end)
        | transDecs(venv, tenv, A.FunctionDec(funcdecls)) =
