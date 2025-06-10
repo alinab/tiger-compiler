@@ -238,6 +238,14 @@ struct
            Types.RECORD(recnmtyp, ref())
          end)
 
+
+    and getFuncResTyp(venv, tenv, result) =
+         case result of
+             SOME(rt, pos) => (case Symbol.look(tenv, rt) of
+                                     SOME rty => rty
+                                  | NONE => Types.NIL)
+          | NONE => Types.NIL
+
     (* Type declarations *)
     and transDecs(venv, tenv, A.TypeDec(tydecls))=
         (let fun enterTyDec ({name, ty, pos}, tenv) =
@@ -268,45 +276,59 @@ struct
           |   false => {tenv=tenv, venv=Symbol.enter(venv, name
                                                   , Env.VarEntry{ty=Types.NIL})}
            end)
-       | transDecs(venv, tenv, A.FunctionDec(funcdecls)) =
-        (let fun mapFunDecs ({name, params, result, body, pos}, venv) =
-             let val resultTy = case result of
-                   SOME(rt, pos) => (case Symbol.look(tenv, rt) of
-                                          SOME resultTy => resultTy
-                                        | NONE  => Types.NIL)
-                 | NONE => Types.NIL
+       | transDecs(venv, tenv, A.FunctionDec(fundecls)) =
+          (let fun mapFunDec (name, params, result, venv) =
+             let
+               val resultTy = getFuncResTyp(venv, tenv, result)
 
-                val params' = List.map (fn {name=name', escape, typ, pos}
-                                => case Symbol.look(tenv, typ) of
-                                    SOME t => {name=name', ty=t}
-                                  | NONE  => {name=name', ty=Types.NIL}) params
+                val params' = List.map (fn p as {name, escape, typ, pos}
+                               => case Symbol.look(tenv, typ) of
+                                 SOME t => Types.NAME(name, ref(SOME(t)))
+                               | NONE  => Types.NAME(name, ref NONE)) params
 
-                val venv' = Symbol.enter(venv, name
-                            , Env.FunEntry{formals = List.map #ty params',
-                                           result = resultTy})
-
-                fun enterParams ({name=name'', ty=ty''}, venv) =
-                            Symbol.enter(venv, name'', Env.VarEntry{ty=ty''})
-
-                val venv'' = List.foldl enterParams venv' params'
               in
-                let val {exp=exp', ty=tenvBody} =
-                                        transExp(venv'', tenv) body;
+                Symbol.enter(venv, name, Env.FunEntry{formals = params',
+                                                      result = resultTy})
+              end
+           in
+             let val venv'' = List.foldl (fn (f, v) =>
+                                    mapFunDec(#name f, #params f, #result f, v))
+                                    venv fundecls
+             in
+              let
+                val funcResTyp = getFuncResTyp(venv'', tenv, #result (List.hd fundecls))
+
+                val venv''' =
+                  let val prms = List.concat (List.map (fn b => #params b) fundecls)
+                      val nameTypVals = List.map (fn x =>
+                          let val t = case Symbol.look(tenv, #typ x) of
+                              SOME t' => t'
+                            | NONE  => Types.UNIT
+                          in
+                          (#name x, t)
+                          end) prms
+                  in
+                    List.foldl (fn ((n,t), v) => Symbol.enter(venv'',
+                                    n, Env.VarEntry{ty=t})) venv'' nameTypVals
+                  end
+
+                val bodies = List.map (fn b => #body b) fundecls
+                val {exp=exp', ty=ty'} = List.foldl (fn (b, _)
+                                           => transExp(venv''', tenv) b)
+                                                   {exp=(), ty=Types.UNIT} bodies
+
+                val funcPos = #pos (List.hd fundecls)
                 in
-                  if tenvBody = resultTy andalso resultTy <> Types.NIL
-                  then venv''
-                  else (E.error pos "Declared and actual result for function\
-                                    \ does not match";
-                       venv)
-                end
+                  if ty' = funcResTyp andalso funcResTyp <> Types.NIL
+                  then {venv=venv''', tenv=tenv}
+                  else
+                   (E.error funcPos "Declared and actual result for function\
+                                     \ does not match";
+                   {venv=venv, tenv=tenv})
+               end
              end
-         in
-           let val venv''' = List.foldl (fn (x,v) =>
-                                                mapFunDecs(x, v)) venv funcdecls
-            in
-                {venv=venv''', tenv=tenv}
-            end
          end)
+
 
   in fun transProg abExp = transExp(Env.base_venv, Env.base_tenv) abExp
   end
