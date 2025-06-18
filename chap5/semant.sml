@@ -14,6 +14,13 @@ struct
                                    |  _ => E.error pos "string required"
 
 
+  fun existInLs (_, []) = false
+      | existInLs (x, y :: ys) = x = y orelse existInLs (x, ys)
+
+  fun checkIllCycl (typref, name, pos) =
+      case typref of
+        ref x => (E.error pos ("Illegal type cycle for type" ^ Symbol.name name); false)
+
   local
   fun transExp(venv, tenv) =
      let fun trexp(A.VarExp(var)) = trvar var
@@ -158,9 +165,9 @@ struct
       (* Let expressions *)
       | trexp(A.LetExp{decs, body, pos}) =
        (let val {venv=venv', tenv=tenv'} =
-        List.foldl (fn (x,{venv=venv'', tenv=tenv''})
+            List.foldl (fn (x,{venv=venv'', tenv=tenv''})
                             => transDecs(venv'', tenv'', x))
-                                  {venv=Env.base_venv, tenv=Env.base_tenv} decs
+                                  {venv=venv, tenv=tenv} decs
         in
           transExp(venv', tenv') body
         end)
@@ -225,9 +232,10 @@ struct
 
       and actualTy (ty, pos) =
         (case ty of
-    	    Types.NAME(sym, ref(SOME(t))) => (case Symbol.look(tenv, sym) of
+    	    Types.NAME(sym, ref(NONE)) => (case Symbol.look(tenv, sym) of
                                          SOME ty => ty
                                        | NONE => Types.UNIT)
+          | Types.NAME(sym, ref(SOME(t))) => t
           | t => t)
       in
        trexp
@@ -235,26 +243,25 @@ struct
 
      (* Transform Absyn.Ty to Types.ty *)
     and transTy(tenv, absynty) : Types.ty = case absynty of
-         A.NameTy(symbol, pos) => (let val t = case Symbol.look(tenv, symbol) of
-                                                 SOME typ => typ
-                                               | NONE => Types.UNIT
-                                   in
-                                    Types.NAME(symbol, ref(SOME(t)))
-                                   end)
-       | A.ArrayTy(symbol, pos) => (case Symbol.look(tenv, symbol) of
-                                  SOME typ => Types.ARRAY(typ, ref())
-                                | NONE     => Types.UNIT)
-       | A.RecordTy(recfieldsls) =>
+         A.NameTy(symbol, pos) => (case Symbol.look(tenv, symbol) of
+                                   SOME typ => Types.NAME(symbol, ref(SOME(typ)))
+                                 | NONE => Types.NAME(symbol, ref NONE))
+       | A.ArrayTy(symbol, pos) =>
+                        (case Symbol.look(tenv, symbol) of
+                               SOME typ => Types.ARRAY(typ, ref())
+                             | NONE  => (E.error pos ("array type does not exist");
+                                          Types.NIL))
+      | A.RecordTy(recfieldsls) =>
          (let fun extractRecTyp recfield =
-             case recfield of
-                  {name, escape, typ, pos} => case Symbol.look(tenv, typ) of
-                                          SOME t => (name, t)
-                                        | NONE  => (name, Types.UNIT)
-             val recnmtyp = List.map extractRecTyp recfieldsls
-         in
-           Types.RECORD(recnmtyp, ref())
+                case recfield of {name, escape, typ, pos} =>
+                            case Symbol.look(tenv, typ) of
+                              SOME t => (name, t)
+                            | NONE  => (E.error pos ("record type does not exist");
+                                        (name, Types.NIL))
+                val recresult = List.map extractRecTyp recfieldsls
+             in
+             Types.RECORD(recresult, ref())
          end)
-
 
     and getFuncResTyp(venv, tenv, result) =
          case result of
@@ -265,33 +272,48 @@ struct
 
     (* Type declarations *)
     and transDecs(venv, tenv, A.TypeDec(tydecls))=
-        (let fun enterTyDec ({name, ty, pos}, tenv) =
-                            Symbol.enter(tenv, name, transTy(tenv, ty))
-             val tenv' = List.foldl enterTyDec tenv tydecls
-          in
-             {venv=venv, tenv=tenv'}
+       (let fun enterTyDec ({name, ty, pos}, tenv) =
+            case ty of
+              A.RecordTy(fieldls) =>
+                let val tenv'' = Symbol.enter(tenv, name,
+                                            Types.NAME(name, ref NONE))
+                    in
+                    Symbol.update(tenv'', name,
+                                    Types.NAME(name, ref(SOME(transTy(tenv'', ty)))))
+                end
+            | _ =>   Symbol.enter(tenv, name, transTy(tenv, ty))
+            val tenv''' = List.foldl enterTyDec tenv tydecls
+            in
+             {venv=venv, tenv=tenv'''}
           end)
        | transDecs(venv, tenv, A.VarDec{name, escape, typ=NONE, init, pos}) =
            (let val {exp=exp', ty=ty'} = transExp(venv, tenv) init
             in
               {tenv=tenv, venv=Symbol.enter(venv, name, Env.VarEntry{ty=ty'})}
             end)
-       | transDecs(venv, tenv, A.VarDec{name, escape ,typ=SOME(symbol, p)
-                                                     , init, pos}) =
-          (let val {exp=exp', ty=ty'} = transExp(venv, tenv) init
-               val typConstr = case Symbol.look(tenv, symbol) of
-                                         SOME v => v
-                                       | NONE => Types.NIL
-           in case ty' = typConstr of
-              (* Initializing expressions of type NIL must be constrained
-               * by a record type *)
-              true => if typConstr = Types.NIL
-                      then {tenv=tenv , venv=Symbol.enter(venv, name
-                                      , Env.VarEntry{ty=Types.RECORD([], ref())})}
-                      else {tenv=tenv , venv=Symbol.enter(venv, name
-                                                 , Env.VarEntry{ty=typConstr})}
-          |   false => {tenv=tenv, venv=Symbol.enter(venv, name
-                                                  , Env.VarEntry{ty=Types.NIL})}
+       | transDecs(venv, tenv, A.VarDec{name, escape, typ=SOME(symbol, p),
+                                                      init, pos}) =
+          (let val typConstr = case Symbol.look(tenv, symbol) of
+                               SOME(Types.NAME(_, ref(SOME(t)))) => t
+                             | SOME t => t
+                             | NONE => Types.NIL
+               val {exp=exp', ty=ty'} = transExp(venv, tenv) init
+           in
+             {tenv=tenv , venv=Symbol.enter(venv, name,
+                                                 Env.VarEntry{ty=ty'})}
+           (* case ty' = typConstr of
+             false =>  Initializing expressions of type NIL must be constrained
+                       * by a record type
+                      if typConstr = Types.NIL
+                      then {tenv=tenv , venv=Symbol.enter(venv, name,
+                              Env.VarEntry{ty=Types.RECORD([], ref())})}
+                      else
+                      {tenv=tenv , venv=Symbol.enter(venv, name,
+                                                 Env.VarEntry{ty=ty'})}
+          | true  => (E.error pos ("variable type and initialization value  \
+                                   \  types do not match");
+                       {tenv=tenv, venv=venv})
+           *)
            end)
        | transDecs(venv, tenv, A.FunctionDec(fundecls)) =
           (let fun mapFunDec (name, params, result, venv) =

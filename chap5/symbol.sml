@@ -13,6 +13,7 @@ sig
   val enter : 'a table * symbol * 'a -> 'a table
   val remove: 'a table * int -> 'a table * 'a
   val look : 'a table * symbol -> 'a option
+  val update : 'a table * symbol * 'a -> 'a table
 end
 
 structure Symbol :> SYMBOL =
@@ -48,5 +49,6 @@ struct
   fun enter(t: 'a table, (s,n): symbol, a: 'a) = IntBinaryMap.insert(t,n,a)
   fun remove(t: 'a table, k: int) = IntBinaryMap.remove(t, k)
   fun look(t: 'a table, (s,n): symbol) = IntBinaryMap.find(t,n)
+  fun update(t: 'a table, (s,n): symbol, a: 'a) = IntBinaryMap.insert'((n, a), t)
 
 end
