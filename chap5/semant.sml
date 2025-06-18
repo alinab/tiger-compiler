@@ -80,9 +80,13 @@ struct
         end)
       (* Sequence Expressions *)
       | trexp(A.SeqExp(expls)) =
-      (let
-         val {exp=exp', ty=ty'} =
-           List.foldl (fn ((e,p),_) => trexp e) {exp=(), ty=Types.UNIT} expls
+      (let val {exp=exp', ty=ty'} =
+           List.foldl (fn ((e,p),_) =>
+           if e = A.BreakExp(p)
+           then (E.error p "Break statements must occur within a while or a for";
+                {exp=(), ty=Types.UNIT})
+           else trexp e)
+           {exp=(), ty=Types.UNIT} expls
        in
          {exp=exp', ty=ty'}
        end)
@@ -121,13 +125,16 @@ struct
       (let
         val {exp=exp', ty=ty'} = trexp test
        in
-        if ty' = Types.INT (* andalso exp' > 0 *)
-        then let val {exp=exp'', ty=ty''} = trexp body
-             in
-               if ty'' = Types.UNIT
-               then trexp(A.WhileExp{test=test, body=body, pos=pos})
-               else {exp=exp'', ty=ty''}
-             end
+        if ty' = Types.INT
+        then (let val {exp=exp', ty=ty'} =
+                List.foldl (fn ((e,p),_) =>
+                if e = A.BreakExp(p)
+                then {exp=(), ty=Types.UNIT}
+                else trexp e)
+                {exp=(), ty=Types.UNIT} [(body,pos)]
+              in
+              {exp=exp', ty=ty'}
+              end)
         else {exp=(), ty=Types.UNIT}
        end)
       (* For Expressions *)
@@ -141,11 +148,17 @@ struct
         val {exp=expHi, ty=tyHi} = trexp hi
        in
          if tyLo = tyHi andalso tyLo = Types.INT
-         (* check for actual values later *)
-         then transExp(venv', tenv') body
+         then (let val {exp=exp', ty=ty'} =
+                List.foldl (fn ((e,p),_) =>
+                if e = A.BreakExp(p)
+                then {exp=(), ty=Types.UNIT}
+                else trexp e)
+                {exp=(), ty=Types.UNIT} [(body,pos)]
+              in
+              {exp=exp', ty=ty'}
+              end)
          else {exp=(), ty=Types.UNIT}
        end)
-      | trexp(A.BreakExp(pos)) = ( {exp=(), ty=Types.NIL} )
       (* Let expressions *)
       | trexp(A.LetExp{decs, body, pos}) =
        (let val {venv=venv', tenv=tenv'} =
@@ -168,6 +181,9 @@ struct
        in
           {exp=(), ty=arrTyp}
        end)
+      | trexp(A.BreakExp(pos)) =
+            (E.error pos "Break statements must occur within a while or a for";
+            {exp=(), ty=Types.UNIT})
 
     and compIntOrStr (expleft, expright, pos) =
         (if checkInt(trexp expleft, pos)=() andalso
