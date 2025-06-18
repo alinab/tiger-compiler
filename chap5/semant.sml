@@ -8,9 +8,6 @@ struct
   type expty = {exp: Translate.exp, ty: Types.ty}
 
 
-  fun checkInt ({exp, ty}, pos) = (case ty of
-                                     Types.INT => ()
-                                   | _    => E.error pos "integer required")
 
   fun checkStr ({exp, ty}, pos) = case ty of
                                      Types.STRING => ()
@@ -28,14 +25,13 @@ struct
         (let
           val (funcResTy, funcFormals) =
             case Symbol.look(venv, func) of
-                        SOME(Env.FunEntry{formals,result}) => (result, formals)
-                     |  _ =>  (E.error pos "function name is missing";
-                              (Types.UNIT, []))
-         val resultTypes = List.map (fn x => #ty (transExp(venv, tenv) x)) args
+                        SOME(Env.FunEntry{formals, result}) => (result, formals)
+                     |  _ =>  (Types.NIL, [])
+        val {exp=callResExp, ty=callResTyp} = List.foldl (fn (b, _)
+                                           => transExp(venv, tenv) b)
+                                                   {exp=(), ty=funcResTy} args
         in
-          if resultTypes = funcFormals
-          then {exp=(), ty=funcResTy}
-          else {exp=(), ty=Types.UNIT}
+          {exp=(), ty=callResTyp}
         end)
       (* Expressions with operations *)
       | trexp(A.OpExp{left, oper=A.PlusOp, right, pos}) =
@@ -194,6 +190,11 @@ struct
               then {exp=(), ty=Types.STRING}
               else {exp=(), ty=Types.UNIT})
 
+    and checkInt ({exp, ty}, pos) =
+      (case ty of
+             Types.INT => ()
+           | _    => E.error pos "integer required")
+
     (*** Expression checking ends here ***)
 
     (* Variable lookups *)
@@ -324,8 +325,8 @@ struct
                           (#name x, t)
                           end) prms
                   in
-                    List.foldl (fn ((n,t), v) => Symbol.enter(venv'',
-                                    n, Env.VarEntry{ty=t})) venv'' nameTypVals
+                    List.foldl (fn ((n,t), v) =>
+                        Symbol.enter(v, n, Env.VarEntry{ty=t})) venv'' nameTypVals
                   end
 
                 val bodies = List.map (fn b => #body b) fundecls
@@ -335,12 +336,14 @@ struct
 
                 val funcPos = #pos (List.hd fundecls)
                 in
-                  if ty' = funcResTyp andalso funcResTyp <> Types.NIL
+                  if funcResTyp = Types.NIL
                   then {venv=venv''', tenv=tenv}
-                  else
-                   (E.error funcPos "Declared and actual result for function\
+                  else if ty' = funcResTyp
+                        then {venv=venv''', tenv=tenv}
+                        else
+                        (E.error funcPos "Declared and actual result for function\
                                      \ does not match";
-                   {venv=venv, tenv=tenv})
+                        {venv=venv, tenv=tenv})
                end
              end
          end)
