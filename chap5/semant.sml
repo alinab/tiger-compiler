@@ -146,7 +146,8 @@ struct
        in
          if ty' = ty''
          then {exp=(), ty=ty'}
-         else {exp=(), ty=Types.UNIT}
+         else (E.error pos ("variable type and assigned value types do not match");
+              {exp=(), ty=Types.NIL})
        end)
       (* If Expressions *)
       | trexp(A.IfExp{test, then', else'=SOME(elseExp), pos}) =
