@@ -156,9 +156,12 @@ struct
         val {exp=exp'', ty=ty''} =  trexp then'
         val {exp=exp''', ty=ty'''} = trexp elseExp
        in
-         if ty' = Types.INT andalso ty'' = ty''' (* andalso exp' > 0 *)
-         then {exp=exp'', ty=ty''}
-         else {exp=exp''', ty=ty'''}
+         if ty'' = ty''' (* andalso exp' > 0 *)
+         then if ty' = Types.INT
+              then {exp=exp'', ty=ty''}
+              else {exp=exp''', ty=ty'''}
+         else {exp=(), ty=(E.error pos ("types of then - else differ");
+                              Types.NIL)}
        end)
       | trexp(A.IfExp{test, then', else'=NONE, pos}) =
       (let
