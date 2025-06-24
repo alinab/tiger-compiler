@@ -169,8 +169,11 @@ struct
         val {exp=exp'', ty=ty''} =  trexp then'
        in
          if ty' = Types.INT (* andalso exp' > 0 *)
-         then {exp=exp'', ty=ty''}
-         else {exp=exp', ty=ty'}
+         then if ty'' = Types.UNIT
+              then {exp=exp'', ty=ty''}
+              else (E.error pos ("non unit value returned");
+                    {exp=(), ty=Types.NIL})
+         else {exp=(), ty=Types.NIL}
        end)
       (* While Expressions *)
       | trexp(A.WhileExp{test, body, pos}) =
