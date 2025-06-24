@@ -291,8 +291,8 @@ struct
       and actualTy (ty, pos) =
         (case ty of
     	    Types.NAME(sym, ref(NONE)) => (case Symbol.look(tenv, sym) of
-                                         SOME ty => ty
-                                       | NONE => Types.UNIT)
+                                            SOME ty => ty
+                                          | NONE => Types.UNIT)
           | Types.NAME(sym, ref(SOME(t))) => t
           | t => t)
       in
