@@ -29,16 +29,37 @@ struct
       | trexp(A.StringExp(s, pos)) = {exp=(), ty=Types.STRING}
       (* Function Calls *)
       | trexp(A.CallExp{func, args, pos}) =
-        (let
-          val (funcResTy, funcFormals) =
-            case Symbol.look(venv, func) of
-                        SOME(Env.FunEntry{formals, result}) => (result, formals)
-                     |  _ =>  (Types.NIL, [])
-        val {exp=callResExp, ty=callResTyp} = List.foldl (fn (b, _)
-                                           => transExp(venv, tenv) b)
-                                                   {exp=(), ty=funcResTy} args
+        (let val (resty, formals') =
+               case Symbol.look(venv, func) of
+                   SOME(Env.FunEntry{formals, result}) =>
+                            (case result of
+                                Types.NIL => (Types.UNIT, formals)
+                              |  _        => (result, formals))
+                | _ => (Types.NIL, [])
+
+             val argExpTyps =
+                    List.map (fn b => actualTy (#ty (trexp b), pos)) args
+             val processFormals = List.map (fn x =>
+                                case x of
+                                    Types.NAME(_, ref(SOME(t))) => t
+                                 |  t' => t') formals'
         in
-          {exp=(), ty=callResTyp}
+           if List.length argExpTyps = List.length processFormals
+           then
+               (* check that the arg and formal function types match *)
+                if argExpTyps = processFormals
+                then
+                   let val {exp=callResExp, ty=callResTyp} =
+                    List.foldl (fn (b, _) => transExp(venv, tenv) b)
+                                              {exp=(), ty=Types.UNIT} args
+                 in
+                    {exp=(), ty=callResTyp}
+                end
+                else (E.error pos ("Function argument and formal types do not match");
+                     {exp=(), ty=Types.NIL})
+           else
+             (E.error pos ("Number of formal and actual arguments do no match");
+              {exp=(), ty=Types.NIL})
         end)
       (* Expressions with operations *)
       | trexp(A.OpExp{left, oper=A.PlusOp, right, pos}) =
