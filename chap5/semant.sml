@@ -182,15 +182,17 @@ struct
        in
         if ty' = Types.INT
         then (let val {exp=exp', ty=ty'} =
-                List.foldl (fn ((e,p),_) =>
-                if e = A.BreakExp(p)
-                then {exp=(), ty=Types.UNIT}
-                else trexp e)
-                {exp=(), ty=Types.UNIT} [(body,pos)]
+                List.foldl (fn ((e,p), _) =>
+                          if e = A.BreakExp(p)
+                          then {exp=(), ty=Types.UNIT}
+                          else trexp e) {exp=(), ty=Types.UNIT} [(body, pos)]
               in
-              {exp=exp', ty=ty'}
+                if ty' <> Types.UNIT
+                then (E.error pos ("a while statement body should return unit");
+                     {exp=(), ty=Types.NIL})
+                else {exp=exp', ty=ty'}
               end)
-        else {exp=(), ty=Types.UNIT}
+        else {exp=(), ty=Types.NIL}
        end)
       (* For Expressions *)
       | trexp(A.ForExp{var, escape, lo, hi, body, pos}) =
