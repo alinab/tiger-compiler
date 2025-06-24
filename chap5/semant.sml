@@ -204,17 +204,21 @@ struct
         val {exp=expLo, ty=tyLo} = trexp lo
         val {exp=expHi, ty=tyHi} = trexp hi
        in
-         if tyLo = tyHi andalso tyLo = Types.INT
+         if tyLo = tyHi andalso tyLo = Types.INT andalso tyHi = Types.INT
          then (let val {exp=exp', ty=ty'} =
                 List.foldl (fn ((e,p),_) =>
                 if e = A.BreakExp(p)
-                then {exp=(), ty=Types.UNIT}
+                then {exp=(), ty=Types.NIL}
                 else trexp e)
                 {exp=(), ty=Types.UNIT} [(body,pos)]
               in
               {exp=exp', ty=ty'}
               end)
-         else {exp=(), ty=Types.UNIT}
+         else if tyHi <> Types.INT
+              then (E.error pos ("to expression in for is not an int");
+                   {exp=(), ty=Types.NIL})
+              else (E.error pos ("from expression in for is not an int");
+                   {exp=(), ty=Types.NIL})
        end)
       (* Let expressions *)
       | trexp(A.LetExp{decs, body, pos}) =
