@@ -310,14 +310,13 @@ struct
                              | NONE  => (E.error pos ("array type does not exist");
                                           Types.NIL))
       | A.RecordTy(recfieldsls) =>
-         (let fun extractRecTyp recfield =
-                case recfield of {name, escape, typ, pos} =>
+         (let val recresult = List.map (
+                    fn ({name, escape, typ, pos}) =>
                             case Symbol.look(tenv, typ) of
-                              SOME t => (name, t)
-                            | NONE  => (E.error pos ("record type does not exist");
-                                        (name, Types.NIL))
-                val recresult = List.map extractRecTyp recfieldsls
-             in
+                               SOME t => (name, t)
+                             | NONE  => (name, Types.NAME(name, ref NONE)))
+                                                                recfieldsls
+            in
              Types.RECORD(recresult, ref())
          end)
 
