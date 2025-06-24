@@ -364,26 +364,21 @@ struct
        | transDecs(venv, tenv, A.VarDec{name, escape, typ=SOME(symbol, p),
                                                       init, pos}) =
           (let val typConstr = case Symbol.look(tenv, symbol) of
-                               SOME(Types.NAME(_, ref(SOME(t)))) => t
-                             | SOME t => t
-                             | NONE => Types.NIL
+                                    SOME t => t
+                                  | NONE => Types.NIL
                val {exp=exp', ty=ty'} = transExp(venv, tenv) init
            in
-             {tenv=tenv , venv=Symbol.enter(venv, name,
+             if isRecordTyp(tenv, symbol)
+             then {tenv=tenv , venv=Symbol.enter(venv, name,
                                                  Env.VarEntry{ty=ty'})}
-           (* case ty' = typConstr of
-             false =>  Initializing expressions of type NIL must be constrained
-                       * by a record type
-                      if typConstr = Types.NIL
-                      then {tenv=tenv , venv=Symbol.enter(venv, name,
-                              Env.VarEntry{ty=Types.RECORD([], ref())})}
-                      else
-                      {tenv=tenv , venv=Symbol.enter(venv, name,
-                                                 Env.VarEntry{ty=ty'})}
-          | true  => (E.error pos ("variable type and initialization value  \
-                                   \  types do not match");
-                       {tenv=tenv, venv=venv})
-           *)
+             else if typConstr <> ty'
+                   then {tenv=tenv , venv=venv}
+                   (* Initializing expressions of type NIL must be constrained
+                    by a record type *)
+                  else if typConstr = Types.NIL andalso ty' = Types.NIL
+                       then {tenv=tenv , venv=Symbol.enter(venv, name,
+                             Env.VarEntry{ty=Types.RECORD([], ref())})}
+                       else {tenv=tenv , venv=venv}
            end)
        | transDecs(venv, tenv, A.FunctionDec(fundecls)) =
           (let fun mapFunDec (name, params, result, venv) =
