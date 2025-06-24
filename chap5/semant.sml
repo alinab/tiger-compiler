@@ -423,14 +423,19 @@ struct
 
                 val funcPos = #pos (List.hd fundecls)
                 in
-                  if funcResTyp = Types.NIL
+                  if funcResTyp = Types.NIL andalso ty' = Types.NIL
+                  (* this is a procedure *)
                   then {venv=venv''', tenv=tenv}
-                  else if ty' = funcResTyp
-                        then {venv=venv''', tenv=tenv}
-                        else
-                        (E.error funcPos "Declared and actual result for function\
+                  else if funcResTyp = Types.NIL andalso ty' <> Types.NIL
+                       then (E.error funcPos "Procedure cannot return a value";
+                              {venv=venv, tenv=tenv})
+                       else
+                         if ty' = funcResTyp
+                         then {venv=venv''', tenv=tenv}
+                         else
+                           (E.error funcPos "Declared and actual result for function\
                                      \ does not match";
-                        {venv=venv, tenv=tenv})
+                           {venv=venv, tenv=tenv})
                end
              end
          end)
