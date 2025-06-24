@@ -13,14 +13,6 @@ struct
                                      Types.STRING => ()
                                    |  _ => E.error pos "string required"
 
-
-  fun existInLs (_, []) = false
-      | existInLs (x, y :: ys) = x = y orelse existInLs (x, ys)
-
-  fun checkIllCycl (typref, name, pos) =
-      case typref of
-        ref x => (E.error pos ("Illegal type cycle for type" ^ Symbol.name name); false)
-
   local
   fun transExp(venv, tenv) =
      let fun trexp(A.VarExp(var)) = trvar var
