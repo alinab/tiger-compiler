@@ -93,14 +93,38 @@ struct
         compIntOrStr(left, right, pos)
       (* Record Expressions *)
       | trexp(A.RecordExp{fields, typ, pos}) =
-       (let
-         val fieldExpsSyms =
-            List.map (fn (sym, exp, p) => (sym, exp)) fields
-         val fieldTyps = List.map (fn x => #ty(trexp(#2 x))) fieldExpsSyms
-         val fieldSyms = List.map (fn x => #1 x) fieldExpsSyms
-         val recordFLs = ListPair.zip(fieldSyms, fieldTyps)
+       (let val fieldExpsSyms = List.map (fn (sym, exp, p) => (sym, exp)) fields
+            val evalFieldTyps = List.map (fn x =>(#1 x, #ty(trexp(#2 x)))) fieldExpsSyms
         in
-          {exp=(), ty=Types.RECORD(recordFLs, ref())}
+         (* match the declared and evaluated type *)
+            if isRecordTyp(tenv, typ)
+            then let
+              val SOME(rectyp) = Symbol.look(tenv, typ)
+              val (Types.RECORD(recDecls, _)) = rectyp
+              val validFieldTyps = List.map (fn a =>
+                       case (List.find (fn x => #1 a = #1 x) recDecls) of
+                            SOME (declFld, declTyp) =>
+                                      (case declTyp of
+                                           Types.RECORD(_,_) => if #2 a = Types.NIL
+                                                               then declTyp
+                                                               else #2 a
+                                          | _   => #2 a)
+                         |  NONE => Types.UNIT) (evalFieldTyps)
+
+              val ty' = case (List.find (fn x => x = Types.UNIT) validFieldTyps) of
+                      SOME _ =>  (E.error pos ("Mismatch in record field names");
+                                  Types.UNIT)
+                   |  NONE => (let val fieldSyms = List.map (fn x => #1 x) fieldExpsSyms
+                                   val recordFLs = ListPair.zip(fieldSyms,
+                                                                    validFieldTyps)
+                               in
+                                Types.RECORD(recordFLs, ref())
+                               end)
+            in
+              {exp=(), ty=ty'}
+            end
+            else ((E.error pos "Initializing type is not a valid record");
+                 {exp=(), ty=Types.NIL})
         end)
       (* Sequence Expressions *)
       | trexp(A.SeqExp(expls)) =
@@ -290,6 +314,11 @@ struct
                                      SOME rty => rty
                                   | NONE => Types.NIL)
           | NONE => Types.NIL
+
+    and isRecordTyp(tenv, t) =
+        case Symbol.look(tenv, t) of
+             SOME(Types.RECORD(_, ref())) => true
+           | _                          => false
 
     (* Type declarations *)
     and transDecs(venv, tenv, A.TypeDec(tydecls))=
