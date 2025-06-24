@@ -334,20 +334,28 @@ struct
 
     (* Type declarations *)
     and transDecs(venv, tenv, A.TypeDec(tydecls))=
-       (let fun enterTyDec ({name, ty, pos}, tenv) =
-            case ty of
-              A.RecordTy(fieldls) =>
-                let val tenv'' = Symbol.enter(tenv, name,
-                                            Types.NAME(name, ref NONE))
-                    in
-                    Symbol.update(tenv'', name,
-                                    Types.NAME(name, ref(SOME(transTy(tenv'', ty)))))
-                end
-            | _ =>   Symbol.enter(tenv, name, transTy(tenv, ty))
-            val tenv''' = List.foldl enterTyDec tenv tydecls
-            in
-             {venv=venv, tenv=tenv'''}
-          end)
+       (let val tenv''' = List.foldl (fn ({name, ty, pos}, tenv) =>
+            (case ty of
+                  A.RecordTy(fieldls) =>
+                        let val tenv' = Symbol.enter(tenv, name,
+                                                   Types.NAME(name, ref NONE))
+                          val t = transTy(tenv', ty)
+                          (* ty is already checked to be a record *)
+                          val (Types.RECORD(m, _)) = t
+
+                          val updtFieldls = List.map (fn (fieldName, typ) =>
+                            case typ of
+                                 Types.NAME(n, ref NONE) => (fieldName, t)
+                             |         _                 => (fieldName, typ)) m
+
+                          val updtrec = Types.RECORD(updtFieldls, ref())
+                          in
+                          Symbol.update(tenv, name, updtrec)
+                      end
+             | _  => Symbol.enter(tenv, name, transTy(tenv, ty)))) tenv tydecls
+           in
+              {venv=venv, tenv=tenv'''}
+           end)
        | transDecs(venv, tenv, A.VarDec{name, escape, typ=NONE, init, pos}) =
            (let val {exp=exp', ty=ty'} = transExp(venv, tenv) init
             in
